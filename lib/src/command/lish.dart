@@ -47,6 +47,8 @@ class LishCommand extends PubCommand {
   /// Whether the publish requires confirmation.
   bool get force => argResults['force'];
 
+  bool get needOAuth => argResults['oauth'];
+
   LishCommand() {
     argParser.addFlag('dry-run',
         abbr: 'n',
@@ -58,42 +60,60 @@ class LishCommand extends PubCommand {
         help: 'Publish without confirmation if there are no errors.');
     argParser.addOption('server',
         help: 'The package server to which to upload this package.');
+    argParser.addFlag('oauth',
+        abbr: 'o',
+        negatable: false,
+        help: 'Publish without OAuth.');
+  }
+
+  _publishToServer(cloudStorageUrl, client, packageBytes) async {
+    // TODO(nweiz): Cloud Storage can provide an XML-formatted error. We
+    // should report that error and exit.
+    var newUri = server.resolve("/api/packages/versions/new");
+    print(newUri);
+    var response = await client.get(newUri, headers: pubApiHeaders);
+    print(newUri);
+    var parameters = parseJsonResponse(response);
+
+    var url = _expectField(parameters, 'url', response);
+    if (url is! String) invalidServerResponse(response);
+    cloudStorageUrl = Uri.parse(url);
+    var request = http.MultipartRequest('POST', cloudStorageUrl);
+
+    var fields = _expectField(parameters, 'fields', response);
+    if (fields is! Map) invalidServerResponse(response);
+    fields.forEach((key, value) {
+      if (value is! String) invalidServerResponse(response);
+      request.fields[key] = value;
+    });
+
+    request.followRedirects = false;
+    request.files.add(http.MultipartFile.fromBytes('file', packageBytes,
+        filename: 'package.tar.gz'));
+    var postResponse =
+        await http.Response.fromStream(await client.send(request));
+
+    var location = postResponse.headers['location'];
+    if (location == null) throw PubHttpException(postResponse);
+    handleJsonSuccess(await client.get(location, headers: pubApiHeaders));
   }
 
   Future _publish(List<int> packageBytes) async {
     Uri cloudStorageUrl;
     try {
-      await oauth2.withClient(cache, (client) {
-        return log.progress('Uploading', () async {
-          // TODO(nweiz): Cloud Storage can provide an XML-formatted error. We
-          // should report that error and exit.
-          var newUri = server.resolve("/api/packages/versions/new");
-          var response = await client.get(newUri, headers: pubApiHeaders);
-          var parameters = parseJsonResponse(response);
-
-          var url = _expectField(parameters, 'url', response);
-          if (url is! String) invalidServerResponse(response);
-          cloudStorageUrl = Uri.parse(url);
-          var request = http.MultipartRequest('POST', cloudStorageUrl);
-
-          var fields = _expectField(parameters, 'fields', response);
-          if (fields is! Map) invalidServerResponse(response);
-          fields.forEach((key, value) {
-            if (value is! String) invalidServerResponse(response);
-            request.fields[key] = value;
+      log.message(log.yellow("Publish requires oauth - $needOAuth"));
+      if (needOAuth) {
+        await oauth2.withClient(cache, (client) {
+          return log.progress('Uploading', () async {
+            _publishToServer(cloudStorageUrl, client, packageBytes);
           });
-
-          request.followRedirects = false;
-          request.files.add(http.MultipartFile.fromBytes('file', packageBytes,
-              filename: 'package.tar.gz'));
-          var postResponse =
-              await http.Response.fromStream(await client.send(request));
-
-          var location = postResponse.headers['location'];
-          if (location == null) throw PubHttpException(postResponse);
-          handleJsonSuccess(await client.get(location, headers: pubApiHeaders));
         });
-      });
+      } else {
+        return log.progress('Uploading', () async {
+          var client = http.Client();
+          await _publishToServer(cloudStorageUrl, client, packageBytes);
+        });
+      }
     } on PubHttpException catch (error) {
       var url = error.response.request.url;
       if (url == cloudStorageUrl) {

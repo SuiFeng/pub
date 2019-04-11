@@ -1,5 +1,18 @@
 Pub is the package manager for Dart.
 
+# 移除google认证
+搭建私仓，用pub publish也会用到google认证服务，由于特定原因，会卡在以下步骤：
+
+		Pub needs your authorization to upload packages on your behalf.
+	    | In a web browser, go to https://accounts.google.com/o/oauth2/auth?access_type=offline&approval_prompt=force&response_type=code&client_id=818368855108-8grd2eg9tj9f38os6f1urbcvsq399u8n.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A52936&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email
+	    | Then click "Allow access".
+	    |
+	    | Waiting for your authorization...
+	    
+所以为了更好发布plugin到私仓，做了以下改动：
+
+* 添加-o, --oauth 参数，默认为false，即不开启google认证服务，可以添加该参数开启认证服务
+
 # Contributing to pub
 
 Thanks for being interested in contributing to pub! Contributing to a new
