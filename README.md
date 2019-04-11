@@ -17,6 +17,10 @@ Pub is the package manager for Dart.
 
 curl -L -s https://github.com/SuiFeng/pub/releases/download/SDK-2.2.1-dev.3.0-CN/install.sh | bash -s
 
+#### 使用方法
+
+cnpub xxxx  后面参数通pub
+
 # Contributing to pub
 
 Thanks for being interested in contributing to pub! Contributing to a new

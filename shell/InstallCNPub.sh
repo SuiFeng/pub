@@ -41,3 +41,5 @@ echo -e "#!/bin/bash\nexec \"$pubpath/cnpub\" \"\$@\"" > $pubpath/cnpube
 ln -f -s $pubpath/cnpube /usr/local/bin/cnpub
 chmod +x $pubpath/cnpube
 chmod +x /usr/local/bin/cnpub
+
+rm -rf .cnpub/
