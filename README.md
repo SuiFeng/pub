@@ -13,6 +13,10 @@ Pub is the package manager for Dart.
 
 * 添加-o, --oauth 参数，默认为false，即不开启google认证服务，可以添加该参数开启认证服务
 
+#### 安装方法
+
+curl -L -s https://github.com/SuiFeng/pub/releases/download/SDK-2.2.1-dev.3.0-CN/install.sh | bash -s
+
 # Contributing to pub
 
 Thanks for being interested in contributing to pub! Contributing to a new
